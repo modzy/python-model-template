@@ -85,7 +85,7 @@ Relevant files and directories:
 
 Clone the repository:
 
-`git clone <insert repo URL here>`
+`git clone https://github.com/modzy/python-model-template.git`
 // update url to git repo
 
 == Usage
