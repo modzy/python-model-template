@@ -26,11 +26,6 @@
 <br>
 <br>
 <div align="center">
-<a href=https://github.com/modzy/packaged-basic-image-classification style="text-decoration:none">Open Source Basic Image Classification Repository</a> |
-<!--update url to git repo-->
-<a href=https://models.modzy.com/docs/how-to-guides/api-keys style="text-decoration:none">Python Model Template Repository</a> |
-<!--update url to git repo-->
-<a href=https://models.modzy.com/docs/model-packaging/model-packaging-python-template style="text-decoration:none">Documentation</a>
 <br>
 <br>
 <br>
