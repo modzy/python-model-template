@@ -23,8 +23,6 @@
 <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/modzy/sdk-python">
 <img alt="GitHub Release Date" src="https://img.shields.io/github/issues-raw/modzy/sdk-python">
 </div>
-<br>
-<br>
 <div align="center">
 <br>
 <br>
