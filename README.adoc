@@ -1,0 +1,404 @@
+:!toc:
+:doctype: article
+:icons: font
+:source-highlighter: highlightjs
+:docname: Python Model Template
+
+
+
+
+++++
+<div align="center">
+<h1>Python Model Template</h1>
+<br>
+<br>
+<img  src="https://www.modzy.com/wp-content/uploads/2019/10/modzy-logo-tm.svg" alt="Modzy" width="350" height="auto">
+<br>
+<br>
+<br>
+<br>
+<p><b>This repository serves as the Python model skeleton template that contains the minimal requirements to build a Modzy-compatible Docker container.</b></p>
+<br>
+<img alt="GitHub contributors" src="https://img.shields.io/github/contributors/modzy/sdk-python">
+<img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/modzy/sdk-python">
+<img alt="GitHub Release Date" src="https://img.shields.io/github/issues-raw/modzy/sdk-python">
+</div>
+<br>
+<br>
+<div align="center">
+<a href=https://models.modzy.com/docs/how-to-guides/job-lifecycle style="text-decoration:none">Non-packaged open source model</a> |
+<!--update url to git repo-->
+<a href=https://models.modzy.com/docs/how-to-guides/api-keys style="text-decoration:none">Template</a> |
+<!--update url to git repo-->
+<a href=https://models.modzy.com/docs/model-packaging/model-packaging-python-template style="text-decoration:none">Documentation</a>
+<br>
+<br>
+<br>
+<br>
+<br>
+<div align="left">
+++++
+
+
+== Introduction
+
+This repository serves as the Python model skeleton template that contains the minimal requirements to build a Modzy-compatible Docker container.
+
+=== A quick tour
+
+Relevant files and directories:
+
+[cols="1,3"]
+|===
+|File / directory |Description
+
+| `asset_bundle/*`
+| Marketplace content such as demo inputs and outputs, documentation, etc.
+
+|`flask_psc_model/*`
+| A utility package that implements the container specification API with Flask.
+
+| `model_lib/*`
+| A sample model library package.
+
+| `model_lib/model.py`
+| A file that contains the `ColorNamePredictorModel` class that wraps the model logic into an interface that the `flask_psc_model` package can understand.
+
+| `tests/*`
+| The unit tests.
+
+| `app.py`
+| The model app that wraps the model in `model_lib` with the utilities from `flask_psc_model`.
+
+| `Dockerfile`
+| The app container definition.
+
+| `entrypoint.sh`
+| The script that starts the app server inside the container.
+
+| `gunicorn.conf.py`
+| The Gunicorn web server configuration file used in the Docker container.
+
+| `model.yaml`
+| The model metadata file with documentation and technical requirements.
+
+| `requirements.txt`
+| Pinned python library dependencies for reproducible environments.
+|===
+
+== Installation
+
+Clone the repository:
+
+`git clone <insert repo URL here>`
+// update url to git repo
+
+== Usage
+
+=== Build and run the container
+
+Build the app server image:
+[source,bash]
+----
+docker build -t model-template:latest .
+----
+
+Run the app server container on `port 8080`:
+[source,bash]
+----
+docker run --name model-template -e PSC_MODEL_PORT=8080 -p 8080:8080 -v /data:/data -d model-template:latest
+----
+
+Check the container's status:
+[source,bash]
+----
+curl -s "http://localhost:8080/status"
+----
+
+Run some inference jobs. Send the data from the `/data` container directory to the model for inference:
+
+With curl:
+[source,bash]
+----
+echo ffaa00 > /data/input.txt
+curl -s -X POST -H "Content-Type: application/json" \
+    --data "{\"type\":\"file\",\"input\":\"/data\",\"output\":\"/data\"}" \
+    "http://localhost:8080/run"
+cat /data/results.json
+----
+
+With the utility cli:
+[source,bash]
+----
+echo ffaa00 > /data/input.txt
+python -m flask_psc_model.cli.run_job --url "http://localhost:8080/run" --input /data --output /data
+cat /data/results.json
+----
+
+Stop the app server:
+[source,bash]
+----
+curl -s -X POST "http://localhost:8080/shutdown"
+----
+
+Check that the exit code is 0:
+[source,bash]
+----
+docker inspect model-template --format="{{.State.Status}} {{.State.ExitCode}}"
+----
+
+Cleanup the exited Docker container:
+[source,bash]
+----
+docker rm model-template
+----
+
+Save the container to a TAR file:
+[source,bash]
+----
+docker save -o model-template-latest.tar model-template:latest
+----
+
+=== Install and run the dev server locally (no container)
+
+Create and activate a virtual environment:
+[source,bash]
+----
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+----
+NOTE: for Anaconda Python use conda to create a virtual env and install the requirements instead.
+
+Run the app script:
+[source,bash]
+----
+python app.py
+----
+
+Or use the Flask runner:
+[source,bash]
+----
+FLASK_APP=app.py flask run
+----
+
+Now you can use `curl` or the `flask_psc_model.cli.run_job` to run jobs as described above.
+
+
+=== Run the unit tests
+
+==== Locally
+[source,bash]
+----
+
+python -m unittest
+----
+
+==== In Docker
+[source,bash]
+----
+docker run --rm --memory 512m --cpus 1 --shm-size 0m model-template:latest python -m unittest
+----
+
+The `memory` and `cpus` values must   match the `model.yaml` file's resources values and the resources later set to the container. `shm-size` is set to 0 to check that the container is not using shared memory that may be limited when deployed.
+
+Adjust the values as needed when running the container and remember to update the values in the `model.yaml` file.
+
+==== In Docker with test files mounted as a volume
+
+If test files are large it may be better to exclude them from the model container. If excluded, mount the test directory as a volume into the application container and run the tests that way:
+
+[source,bash]
+----
+docker run --rm --memory 512m --cpus 1 --shm-size 0m -v $(pwd)/test:/opt/app/test model-template:latest python -m unittest
+----
+
+While it is very useful to ensure that the model code is working properly, the unit tests don't check if the container is configured properly to communicate with the outside world.
+
+You can manually test the container API using `curl` or other HTTP clients or the cli runner discussed above.
+//TODO: better way to automate this sort of external container testing.
+
+== Minimal checklist to implement a new model
+
+These are the basic steps needed to update this repository with your own model:
+
+[cols="1,8"]
+|===
+
+
+|+++
+<input type="checkbox">
++++
+| Create a copy of the repository or copy these files into an existing repository.
+
+|+++
+<input type="checkbox">
++++
+| Update the `model.yaml` metadata file with information about the model. Ignore the `resources` and `timeout` sections until the containerized model is fully implemented.
+//_This is a recommended first step because it will force you to think about the inputs and outputs of the model before you write any code :)_
+
+|+++
+<input type="checkbox">
++++
+| Replace `model_lib` with the model's code.
+
+|+++
+<input type="checkbox">
++++
+| Update the `requirements.txt` file with any additional dependencies for the model.
+
+|+++
+<input type="checkbox">
++++
+| Define a class that extends from the `flask_psc_model.ModelBase` abstract base class and implements the required abstract methods.
+
+Define: +
+. `input_filenames` +
+. `output_filenames` +
+. `run`
+
+See `model_lib/model.py` for a sample implementation and `flask_psc_model.ModelBase` docstrings for more info.
+
+|+++
+<input type="checkbox">
++++
+| Update `app.py` to configure the model app with the newly implemented model class.
+
+|+++
+<input type="checkbox">
++++
+| Update and write new unit tests in `tests/`:
+
+Add new test case data to `tests/data/` with sample inputs and expected outputs. +
+    - The `examples` directory should contain files that are expected to run successfully and their expected results. +
+    - The `validation-error` directory should contain files that are not expected to run successfully and their expected error message text, to test the model's error handling.
+
+Add any model specific unit tests to `tests/test_model.py`.
+
+Update the application unit tests `tests/test_app.py` for the model. In particular, update the `check_results` function to validate that the actual application run results match the expected results.
+
+|+++
+<input type="checkbox">
++++
+| Increase the `timeout` in the `model.yaml` file if the model needs more time to run in edge cases. The Gunicorn configuration file loads the `timeout` and uses it to stop the model if it takes too long to run.
+
+|+++
+<input type="checkbox">
++++
+| Update the `Dockerfile` with all of the model app's code, data, and runtime dependencies.
+
+|+++
+<input type="checkbox">
++++
+| Use the `Dockerfile` to build the container image and test.
+
+|+++
+<input type="checkbox">
++++
+| Use the container image to determine the final values for the `resources` and `timeout` sections of the `model.yaml` metadata file.
+|===
+
+
+== Docker container specification
+
+The Docker container must expose an HTTP API on the port specified by the `PSC_MODEL_PORT` environment variable that implements the `/status`, `/run`, and `/shutdown` routes detailed below.
+
+The container must start the HTTP server process by default when run with no command argument:
+
+[source,bash]
+----
+docker run image
+----
+
+Define a `CMD` that starts the server process with the `_exec_` syntax in the Dockerfile:
+
+[source,docker]
+----
+COPY entrypoint.sh ./
+CMD ["./entrypoint.sh"]
+----
+
+== HTTP API Specification
+
+The `flask_psc_model` package implements the HTTP API.
+
+==== Response DTO:
+
+The routes return an `application/json` MIME type with this format:
+
+[source,json]
+----
+{
+    "statusCode": 200,
+    "status": "OK",
+    "message": "The call went well or terribly."
+}
+----
+
+If something is wrong, the message returns information to help address the issue.
+
+=== Status [GET /status]
+
+Returns the model's status after initialization.
+
+==== Response
+- Status 200: the model is ready to run.
+- Status 500: error loading the model.
+
+=== Run [POST /run]
+
+Runs the model inference on a given input.
+
+==== Request Body
+
+Contains the job configuration object with an `application/json` MIME type:
+
+[source,json]
+----
+{
+    "type": "file",
+    "input": "/path/to/input/directory",
+    "output": "/path/to/output/directory"
+}
+----
+
+[cols="1,8"]
+|===
+|`type` +
+ ~required~
+ | The input and output type; at this time the value needs to be "file".
+|`input` +
+ ~required~ | The filesystem directory path where the model should read input data files.
+|`output` +
+ ~required~ | The filesystem directory path where the model writes output data files.
+|===
+
+The filenames for input and output files contained within the input and output directories are specified in the model metadata.
+
+==== Response
+
+- Status 200: successful inference.
+- Status 400: invalid job configuration object: +
+   -> The job configuration object is malformed or the expected files do no exist, cannot be read, or written. +
+   When running on the platform this should not occur but it may be useful for debugging.
+
+- Status 415: invalid media type: +
+  -> the client did not post `application/json` in the HTTP body. +
+  When running on the platform this should not occur but it may be useful for debugging.
+
+- Status 422: unprocessable input file: +
+  -> the model cannot run inference on the input files An input file may have a wrong format, be too large, be too small, etc.
+
+- Status 500: error running the model.
+
+=== Shutdown [POST /shutdown]
+
+The model server process should exit with exit code 0.
+
+==== Response
+*The model server is not required to send a response. It may simply drop the connection. However, a response is encouraged.*
+
+- Status 202: request accepted: +
+  -> the server process will exit after returning the response.
+
+- Status 500: unexpected error.
