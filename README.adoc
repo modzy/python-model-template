@@ -45,9 +45,6 @@ Relevant files and directories:
 |===
 |File / directory |Description
 
-| `asset_bundle/*`
-| Marketplace content such as demo inputs and outputs, documentation, etc.
-
 |`flask_psc_model/*`
 | A utility package that implements the container specification API with Flask.
 
