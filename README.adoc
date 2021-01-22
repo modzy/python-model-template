@@ -52,7 +52,7 @@ Relevant files and directories:
 | A sample model library package.
 
 | `model_lib/model.py`
-| A file that contains the `ColorNamePredictorModel` class that wraps the model logic into an interface that the `flask_psc_model` package can understand.
+| A file that contains the `ModelName` class that wraps the model logic into an interface that the `flask_psc_model` package can understand.
 
 | `tests/*`
 | The unit tests.
