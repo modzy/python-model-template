@@ -4,7 +4,7 @@ Flask>=1.1
 gunicorn>=19.8
 humanfriendly
 python-box
-PyYAML
+PyYAML>=5.4
 werkzeug>=1.0.0
 
 # you may add your own base requirements here and use a tool like
